@@ -23,7 +23,7 @@ export class BackupManager {
   // 创建备份
   async createBackup(): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupName = `openclaw-memory-backup-${timestamp}`;
+    const backupName = `openclaw-mem-recall-backup-${timestamp}`;
     const backupPath = join(this.options.backupDir, backupName);
 
     // 确保备份目录存在
@@ -147,7 +147,7 @@ export class BackupManager {
       const fullPath = join(this.options.backupDir, item);
       const stat = statSync(fullPath);
       
-      if (item.startsWith('openclaw-memory-backup-')) {
+      if (item.startsWith('openclaw-mem-recall-backup-')) {
         backups.push({
           name: item,
           path: fullPath,

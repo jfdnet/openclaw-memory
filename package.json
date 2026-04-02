@@ -1,6 +1,6 @@
 {
   "name": "openclaw-mem-recall",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "OpenClaw 工作区记忆系统 - 离线优先、Markdown 原生、结构化回忆",
   "main": "dist/index.js",
   "bin": {

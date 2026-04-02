@@ -16,7 +16,7 @@ export class WorkspaceManager {
   private workspaces: Map<string, Workspace> = new Map();
 
   constructor() {
-    this.configDir = join(homedir(), '.openclaw-memory');
+    this.configDir = join(homedir(), '.openclaw-mem-recall');
     this.configFile = join(this.configDir, 'workspaces.json');
     this.load();
   }

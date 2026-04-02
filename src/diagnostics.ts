@@ -160,32 +160,32 @@ export class Diagnostics {
       return {
         status: 'warning',
         message: '今日日志未创建',
-        details: '建议运行: openclaw-memory log "今日记录"'
+        details: '建议运行: openclaw-mem-recall log "今日记录"'
       };
     }
   }
 
   private checkBackups(): DiagnosticResult {
-    const backupDir = join(require('os').homedir(), '.openclaw-memory-backups');
+    const backupDir = join(require('os').homedir(), '.openclaw-mem-recall-backups');
     
     if (!existsSync(backupDir)) {
       return {
         status: 'warning',
         message: '备份目录不存在',
-        details: '建议运行: openclaw-memory backup'
+        details: '建议运行: openclaw-mem-recall backup'
       };
     }
 
     const { readdirSync } = require('fs');
     const backups = readdirSync(backupDir).filter((f: string) => 
-      f.startsWith('openclaw-memory-backup-')
+      f.startsWith('openclaw-mem-recall-backup-')
     );
 
     if (backups.length === 0) {
       return {
         status: 'warning',
         message: '暂无备份',
-        details: '建议运行: openclaw-memory backup'
+        details: '建议运行: openclaw-mem-recall backup'
       };
     }
 

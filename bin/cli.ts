@@ -8,7 +8,7 @@ import { join } from 'path';
 const program = new Command();
 
 program
-  .name('openclaw-memory')
+  .name('openclaw-mem-recall')
   .description('OpenClaw 工作区记忆系统')
   .version('0.4.0');
 
@@ -391,7 +391,7 @@ program
   .command('backup')
   .description('创建备份')
   .option('-w, --workspace <path>', '工作区路径', join(homedir(), '.openclaw', 'workspace'))
-  .option('-d, --dir <directory>', '备份目录', join(homedir(), '.openclaw-memory-backups'))
+  .option('-d, --dir <directory>', '备份目录', join(homedir(), '.openclaw-mem-recall-backups'))
   .option('-l, --list', '列出所有备份')
   .option('-c, --clean', '清理旧备份')
   .option('-k, --keep <number>', '保留备份数量', '10')

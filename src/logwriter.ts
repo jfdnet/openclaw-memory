@@ -23,7 +23,7 @@ export class LogWriter {
     // 确保目录存在
     const memoryDir = join(this.workspacePath, 'memory');
     if (!existsSync(memoryDir)) {
-      throw new Error('Memory directory not found. Run `openclaw-memory init` first.');
+      throw new Error('Memory directory not found. Run `openclaw-mem-recall init` first.');
     }
 
     // 构建日志条目

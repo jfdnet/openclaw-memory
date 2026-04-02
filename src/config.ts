@@ -33,7 +33,7 @@ export class ConfigManager {
   private config: Config;
 
   constructor() {
-    this.configPath = join(homedir(), '.openclaw-memory.json');
+    this.configPath = join(homedir(), '.openclaw-mem-recall.json');
     this.config = this.load();
   }
 
