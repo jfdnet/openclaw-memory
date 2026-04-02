@@ -515,31 +515,6 @@ program
   });
 
 program
-  .command('web')
-  .description('启动 Web UI')
-  .option('-p, --port <number>', '端口号', '8080')
-  .action(async (options) => {
-    try {
-      const { WebUIServer } = await import('../src/webui.js');
-      const server = new WebUIServer(parseInt(options.port));
-      await server.start();
-      
-      console.log(chalk.green('✅ Web UI 已启动'));
-      console.log(chalk.cyan(`打开浏览器访问: http://localhost:${options.port}`));
-      
-      // 保持运行
-      process.on('SIGINT', async () => {
-        console.log(chalk.yellow('\n🛑 正在停止 Web UI...'));
-        await server.stop();
-        process.exit(0);
-      });
-    } catch (error: any) {
-      console.error(chalk.red('❌ 启动 Web UI 失败:'), error.message);
-      process.exit(1);
-    }
-  });
-
-program
   .command('doctor')
   .description('诊断和排查问题')
   .action(async () => {
