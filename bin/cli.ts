@@ -457,4 +457,154 @@ program
     }
   });
 
+program
+  .command('workspace')
+  .description('多工作区管理')
+  .option('-l, --list', '列出所有工作区')
+  .option('-a, --add <name>', '添加工作区')
+  .option('-p, --path <path>', '工作区路径')
+  .option('-d, --description <desc>', '工作区描述')
+  .option('-r, --remove <name>', '删除工作区')
+  .option('-u, --use <name>', '切换工作区')
+  .action(async (options) => {
+    try {
+      const { WorkspaceManager } = await import('../src/workspace.js');
+      const manager = new WorkspaceManager();
+
+      if (options.list) {
+        const workspaces = manager.list();
+        console.log(chalk.blue(`共有 ${workspaces.length} 个工作区:`));
+        const current = manager.getCurrent();
+        
+        for (const ws of workspaces) {
+          const isCurrent = ws.name === current;
+          const marker = isCurrent ? chalk.green('→ ') : '  ';
+          console.log(`${marker}${chalk.cyan(ws.name)} ${isCurrent ? chalk.green('(当前)') : ''}`);
+          console.log(chalk.gray(`    路径: ${ws.path}`));
+          if (ws.description) {
+            console.log(chalk.gray(`    描述: ${ws.description}`));
+          }
+        }
+        return;
+      }
+
+      if (options.add && options.path) {
+        manager.add(options.add, options.path, options.description);
+        console.log(chalk.green(`✅ 工作区 "${options.add}" 已添加`));
+        return;
+      }
+
+      if (options.remove) {
+        manager.remove(options.remove);
+        console.log(chalk.green(`✅ 工作区 "${options.remove}" 已删除`));
+        return;
+      }
+
+      if (options.use) {
+        manager.use(options.use);
+        manager.setCurrent(options.use);
+        console.log(chalk.green(`✅ 已切换到工作区 "${options.use}"`));
+        return;
+      }
+
+      console.log(chalk.yellow('请使用 --list, --add, --remove 或 --use'));
+    } catch (error: any) {
+      console.error(chalk.red('❌ 工作区操作失败:'), error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('web')
+  .description('启动 Web UI')
+  .option('-p, --port <number>', '端口号', '8080')
+  .action(async (options) => {
+    try {
+      const { WebUIServer } = await import('../src/webui.js');
+      const server = new WebUIServer(parseInt(options.port));
+      await server.start();
+      
+      console.log(chalk.green('✅ Web UI 已启动'));
+      console.log(chalk.cyan(`打开浏览器访问: http://localhost:${options.port}`));
+      
+      // 保持运行
+      process.on('SIGINT', async () => {
+        console.log(chalk.yellow('\n🛑 正在停止 Web UI...'));
+        await server.stop();
+        process.exit(0);
+      });
+    } catch (error: any) {
+      console.error(chalk.red('❌ 启动 Web UI 失败:'), error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('doctor')
+  .description('诊断和排查问题')
+  .action(async () => {
+    try {
+      const { Diagnostics } = await import('../src/diagnostics.js');
+      const diagnostics = new Diagnostics();
+      const results = await diagnostics.run();
+      diagnostics.print(results);
+    } catch (error: any) {
+      console.error(chalk.red('❌ 诊断失败:'), error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('ollama')
+  .description('Ollama 本地嵌入管理')
+  .option('-c, --check', '检查 Ollama 是否可用')
+  .option('-l, --list', '列出可用模型')
+  .option('-s, --set <model>', '设置默认模型')
+  .action(async (options) => {
+    try {
+      const { OllamaEmbeddingService } = await import('../src/ollama.js');
+      const ollama = new OllamaEmbeddingService({
+        baseURL: 'http://localhost:11434',
+        model: 'nomic-embed-text'
+      });
+
+      if (options.check) {
+        const available = await ollama.checkAvailability();
+        if (available) {
+          console.log(chalk.green('✅ Ollama 服务正常运行'));
+        } else {
+          console.log(chalk.red('❌ Ollama 服务未启动'));
+          console.log(chalk.gray('请运行: ollama serve'));
+        }
+        return;
+      }
+
+      if (options.list) {
+        const models = await ollama.listModels();
+        if (models.length === 0) {
+          console.log(chalk.yellow('暂无可用模型'));
+        } else {
+          console.log(chalk.blue('可用模型:'));
+          for (const model of models) {
+            console.log(`  ${chalk.cyan(model)}`);
+          }
+        }
+        return;
+      }
+
+      if (options.set) {
+        const config = new (await import('../src/config.js')).ConfigManager();
+        config.set('embeddingProvider', 'ollama');
+        config.set('embeddingModel', options.set);
+        console.log(chalk.green(`✅ 已设置 Ollama 模型: ${options.set}`));
+        return;
+      }
+
+      console.log(chalk.yellow('请使用 --check, --list 或 --set'));
+    } catch (error: any) {
+      console.error(chalk.red('❌ Ollama 操作失败:'), error.message);
+      process.exit(1);
+    }
+  });
+
 program.parse();
