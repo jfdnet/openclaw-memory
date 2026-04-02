@@ -10,7 +10,7 @@ const program = new Command();
 program
   .name('openclaw-memory')
   .description('OpenClaw 工作区记忆系统')
-  .version('0.1.0');
+  .version('0.4.0');
 
 program
   .command('log')
@@ -329,6 +329,130 @@ program
       await memory.close();
     } catch (error) {
       console.error(chalk.red('❌ 查询失败:'), error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('config')
+  .description('配置管理')
+  .option('-g, --get <key>', '获取配置项')
+  .option('-s, --set <key>', '设置配置项')
+  .option('-v, --value <value>', '配置值')
+  .option('-l, --list', '列出所有配置')
+  .option('-r, --reset', '重置为默认配置')
+  .action(async (options) => {
+    try {
+      const { ConfigManager } = await import('../src/config.js');
+      const config = new ConfigManager();
+
+      if (options.reset) {
+        config.reset();
+        console.log(chalk.green('✅ 配置已重置为默认值'));
+        return;
+      }
+
+      if (options.list) {
+        console.log(chalk.blue('当前配置:'));
+        console.log(chalk.gray(`配置文件: ${config.getConfigPath()}`));
+        console.log();
+        const current = config.get();
+        for (const [key, value] of Object.entries(current)) {
+          if (key.includes('Key') || key.includes('Secret')) {
+            console.log(`${key}: ${chalk.gray('***隐藏***')}`);
+          } else {
+            console.log(`${key}: ${chalk.cyan(value)}`);
+          }
+        }
+        return;
+      }
+
+      if (options.get) {
+        const current = config.get();
+        const value = current[options.get as keyof typeof current];
+        console.log(`${options.get}: ${chalk.cyan(value)}`);
+        return;
+      }
+
+      if (options.set && options.value) {
+        config.set(options.set, options.value);
+        console.log(chalk.green(`✅ 已设置 ${options.set} = ${options.value}`));
+        return;
+      }
+
+      console.log(chalk.yellow('请使用 --get, --set, --list 或 --reset'));
+    } catch (error: any) {
+      console.error(chalk.red('❌ 配置操作失败:'), error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('backup')
+  .description('创建备份')
+  .option('-w, --workspace <path>', '工作区路径', join(homedir(), '.openclaw', 'workspace'))
+  .option('-d, --dir <directory>', '备份目录', join(homedir(), '.openclaw-memory-backups'))
+  .option('-l, --list', '列出所有备份')
+  .option('-c, --clean', '清理旧备份')
+  .option('-k, --keep <number>', '保留备份数量', '10')
+  .action(async (options) => {
+    try {
+      const { BackupManager } = await import('../src/backup.js');
+      const backup = new BackupManager({
+        workspacePath: options.workspace,
+        backupDir: options.dir
+      });
+
+      if (options.list) {
+        const backups = backup.listBackups();
+        if (backups.length === 0) {
+          console.log(chalk.yellow('暂无备份'));
+        } else {
+          console.log(chalk.blue(`共有 ${backups.length} 个备份:`));
+          for (const b of backups) {
+            const size = (b.size / 1024 / 1024).toFixed(2);
+            console.log(`  ${chalk.cyan(b.name)} ${chalk.gray(`${size}MB ${b.date.toLocaleString()}`)}`);
+          }
+        }
+        return;
+      }
+
+      if (options.clean) {
+        const deleted = await backup.cleanOldBackups(parseInt(options.keep));
+        console.log(chalk.green(`✅ 已清理 ${deleted} 个旧备份`));
+        return;
+      }
+
+      console.log(chalk.blue('📦 正在创建备份...'));
+      const backupPath = await backup.createBackup();
+      console.log(chalk.green('✅ 备份完成'));
+      console.log(chalk.gray(`位置: ${backupPath}`));
+    } catch (error: any) {
+      console.error(chalk.red('❌ 备份失败:'), error.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('restore')
+  .description('恢复备份')
+  .argument('<backup>', '备份文件或目录')
+  .option('-w, --workspace <path>', '工作区路径', join(homedir(), '.openclaw', 'workspace'))
+  .action(async (backupPath, options) => {
+    try {
+      const { BackupManager } = await import('../src/backup.js');
+      const backup = new BackupManager({
+        workspacePath: options.workspace,
+        backupDir: ''
+      });
+
+      console.log(chalk.yellow('⚠️  恢复将覆盖当前工作区的数据！'));
+      console.log(chalk.blue('🔄 正在恢复备份...'));
+      
+      await backup.restoreBackup(backupPath);
+      console.log(chalk.green('✅ 恢复完成'));
+    } catch (error: any) {
+      console.error(chalk.red('❌ 恢复失败:'), error.message);
       process.exit(1);
     }
   });
