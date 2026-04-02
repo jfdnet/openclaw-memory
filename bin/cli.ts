@@ -156,4 +156,136 @@ program
     }
   });
 
+program
+  .command('reflect')
+  .description('运行反思任务，整理记忆')
+  .option('-w, --workspace <path>', '工作区路径', join(homedir(), '.openclaw', 'workspace'))
+  .option('-d, --date <date>', '指定日期 (YYYY-MM-DD)', new Date().toISOString().split('T')[0])
+  .action(async (options) => {
+    try {
+      const { ReflectionTask } = await import('../src/reflection.js');
+      
+      const memory = new OpenClawMemory({
+        workspacePath: options.workspace,
+        enableReflection: true,
+        reflectionInterval: 1
+      });
+
+      await memory.init();
+      
+      const reflection = new ReflectionTask(memory, {
+        workspacePath: options.workspace,
+        minConfidenceThreshold: 0.7,
+        maxFactsPerReflection: 50
+      });
+
+      console.log(chalk.blue('🔄 运行反思任务...'));
+      const result = await reflection.runDailyReflection(options.date);
+      
+      console.log(chalk.green('✅ 反思完成'));
+      console.log(chalk.gray(`  更新实体: ${result.entitiesUpdated}`));
+      console.log(chalk.gray(`  观点演变: ${result.opinionsRevised}`));
+      console.log(chalk.gray(`  新洞察: ${result.newInsights.length}`));
+      
+      if (result.newInsights.length > 0) {
+        console.log(chalk.cyan('\n💡 新洞察:'));
+        for (const insight of result.newInsights) {
+          console.log(chalk.cyan(`  - ${insight}`));
+        }
+      }
+      
+      await memory.close();
+    } catch (error) {
+      console.error(chalk.red('❌ 反思任务失败:'), error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('timerange')
+  .description('查询时间范围的记忆')
+  .argument('<start>', '开始日期 (YYYY-MM-DD)')
+  .argument('<end>', '结束日期 (YYYY-MM-DD)')
+  .option('-w, --workspace <path>', '工作区路径', join(homedir(), '.openclaw', 'workspace'))
+  .option('-l, --limit <number>', '返回数量', '100')
+  .action(async (start, end, options) => {
+    try {
+      const memory = new OpenClawMemory({
+        workspacePath: options.workspace,
+        enableReflection: false,
+        reflectionInterval: 7
+      });
+
+      await memory.init();
+      
+      console.log(chalk.blue(`🔍 查询 ${start} 到 ${end} 的记忆...`));
+      const results = await memory.recallByTimeRange(start, end, parseInt(options.limit));
+      
+      if (results.length === 0) {
+        console.log(chalk.yellow('未找到相关记忆'));
+      } else {
+        console.log(chalk.green(`找到 ${results.length} 条记忆:`));
+        console.log();
+        
+        for (const fact of results) {
+          const kindColor = {
+            world: chalk.cyan,
+            experience: chalk.green,
+            opinion: chalk.yellow,
+            observation: chalk.gray
+          }[fact.kind];
+
+          console.log(kindColor(`[${fact.kind.toUpperCase()}]`) + ' ' + fact.content);
+          console.log(chalk.gray(`  来源: ${fact.source} | 时间: ${fact.timestamp}`));
+          if (fact.confidence) {
+            console.log(chalk.gray(`  置信度: ${fact.confidence}`));
+          }
+          console.log();
+        }
+      }
+      
+      await memory.close();
+    } catch (error) {
+      console.error(chalk.red('❌ 查询失败:'), error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('opinion')
+  .description('查看观点演变历史')
+  .argument('<statement>', '观点陈述')
+  .option('-w, --workspace <path>', '工作区路径', join(homedir(), '.openclaw', 'workspace'))
+  .action(async (statement, options) => {
+    try {
+      const memory = new OpenClawMemory({
+        workspacePath: options.workspace,
+        enableReflection: false,
+        reflectionInterval: 7
+      });
+
+      await memory.init();
+      
+      console.log(chalk.blue(`📊 查询观点演变: "${statement}"`));
+      const history = await memory.getOpinionHistory(statement);
+      
+      if (history.length === 0) {
+        console.log(chalk.yellow('未找到该观点的历史记录'));
+      } else {
+        console.log(chalk.green(`找到 ${history.length} 条历史记录:`));
+        console.log();
+        
+        for (const record of history) {
+          const confidenceBar = '█'.repeat(Math.round(record.confidence * 10)) + '░'.repeat(10 - Math.round(record.confidence * 10));
+          console.log(chalk.yellow(`[${record.timestamp}]`) + ` 置信度: ${confidenceBar} ${record.confidence.toFixed(2)}`);
+        }
+      }
+      
+      await memory.close();
+    } catch (error) {
+      console.error(chalk.red('❌ 查询失败:'), error);
+      process.exit(1);
+    }
+  });
+
 program.parse();

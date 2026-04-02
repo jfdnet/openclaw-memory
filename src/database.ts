@@ -91,6 +91,29 @@ export class MemoryDatabase {
       )
     `);
 
+    // 嵌入表（可选）
+    await exec(`
+      CREATE TABLE IF NOT EXISTS embeddings (
+        fact_id INTEGER PRIMARY KEY,
+        embedding BLOB,
+        model TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (fact_id) REFERENCES facts(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 观点演变历史
+    await exec(`
+      CREATE TABLE IF NOT EXISTS opinion_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        statement TEXT NOT NULL,
+        confidence REAL NOT NULL,
+        timestamp TEXT NOT NULL,
+        evidence_facts TEXT,
+        source TEXT NOT NULL
+      )
+    `);
+
     // 触发器
     await exec(`
       CREATE TRIGGER IF NOT EXISTS facts_ai AFTER INSERT ON facts BEGIN
@@ -215,6 +238,119 @@ export class MemoryDatabase {
         (err: Error | null) => {
           if (err) reject(err);
           else resolve();
+        }
+      );
+    });
+  }
+
+  // 时间范围查询
+  async searchByTimeRange(startDate: string, endDate: string, limit: number = 100): Promise<MemoryFact[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      this.db!.all(
+        `SELECT * FROM facts
+         WHERE timestamp >= ? AND timestamp <= ?
+         ORDER BY timestamp DESC
+         LIMIT ?`,
+        startDate,
+        endDate,
+        limit,
+        (err: Error | null, rows: any[]) => {
+          if (err) reject(err);
+          else {
+            resolve(rows.map(row => ({
+              ...row,
+              entities: JSON.parse(row.entities || '[]')
+            })));
+          }
+        }
+      );
+    });
+  }
+
+  // 保存嵌入
+  async saveEmbedding(factId: number, embedding: number[], model: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const embeddingBuffer = Buffer.from(new Float64Array(embedding).buffer);
+
+    return new Promise((resolve, reject) => {
+      this.db!.run(
+        `INSERT OR REPLACE INTO embeddings (fact_id, embedding, model)
+         VALUES (?, ?, ?)`,
+        factId,
+        embeddingBuffer,
+        model,
+        (err: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+  }
+
+  // 获取所有嵌入
+  async getAllEmbeddings(): Promise<{ factId: number; embedding: number[]; model: string }[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      this.db!.all(
+        'SELECT fact_id, embedding, model FROM embeddings',
+        (err: Error | null, rows: any[]) => {
+          if (err) reject(err);
+          else {
+            resolve(rows.map(row => ({
+              factId: row.fact_id,
+              embedding: Array.from(new Float64Array(row.embedding.buffer)),
+              model: row.model
+            })));
+          }
+        }
+      );
+    });
+  }
+
+  // 保存观点演变
+  async addOpinionHistory(statement: string, confidence: number, timestamp: string, evidenceFacts: number[], source: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      this.db!.run(
+        `INSERT INTO opinion_history (statement, confidence, timestamp, evidence_facts, source)
+         VALUES (?, ?, ?, ?, ?)`,
+        statement,
+        confidence,
+        timestamp,
+        JSON.stringify(evidenceFacts),
+        source,
+        (err: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+  }
+
+  // 获取观点演变历史
+  async getOpinionHistory(statement: string): Promise<{ confidence: number; timestamp: string; evidence: number[] }[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      this.db!.all(
+        `SELECT confidence, timestamp, evidence_facts FROM opinion_history
+         WHERE statement = ?
+         ORDER BY timestamp DESC`,
+        statement,
+        (err: Error | null, rows: any[]) => {
+          if (err) reject(err);
+          else {
+            resolve(rows.map(row => ({
+              confidence: row.confidence,
+              timestamp: row.timestamp,
+              evidence: JSON.parse(row.evidence_facts || '[]')
+            })));
+          }
         }
       );
     });

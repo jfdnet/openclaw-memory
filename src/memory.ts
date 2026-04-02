@@ -125,6 +125,30 @@ export class OpenClawMemory {
     return this.db.getEntities();
   }
 
+  // 时间范围查询
+  async recallByTimeRange(startDate: string, endDate: string, limit: number = 100): Promise<MemoryFact[]> {
+    return this.db.searchByTimeRange(startDate, endDate, limit);
+  }
+
+  // 保存嵌入
+  async saveEmbedding(factId: number, embedding: number[], model: string): Promise<void> {
+    return this.db.saveEmbedding(factId, embedding, model);
+  }
+
+  // 获取所有嵌入
+  async getAllEmbeddings(): Promise<{ factId: number; embedding: number[]; model: string }[]> {
+    return this.db.getAllEmbeddings();
+  }
+
+  // 观点历史
+  async addOpinionHistory(statement: string, confidence: number, timestamp: string, evidenceFacts: number[], source: string): Promise<void> {
+    return this.db.addOpinionHistory(statement, confidence, timestamp, evidenceFacts, source);
+  }
+
+  async getOpinionHistory(statement: string): Promise<{ confidence: number; timestamp: string; evidence: number[] }[]> {
+    return this.db.getOpinionHistory(statement);
+  }
+
   async close(): Promise<void> {
     await this.db.close();
   }
