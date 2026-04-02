@@ -1,0 +1,43 @@
+{
+  "name": "openclaw-memory",
+  "version": "0.1.0",
+  "description": "OpenClaw 工作区记忆系统 - 离线优先、Markdown 原生、结构化回忆",
+  "main": "dist/index.js",
+  "bin": {
+    "openclaw-memory": "bin/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest",
+    "lint": "eslint src/**/*.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "openclaw",
+    "memory",
+    "markdown",
+    "sqlite",
+    "fts5",
+    "offline"
+  ],
+  "author": "jfd",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0",
+    "sqlite3": "^5.1.7",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/sqlite3": "^3.1.11",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "vitest": "^1.2.0",
+    "eslint": "^8.56.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
