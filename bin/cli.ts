@@ -13,6 +13,51 @@ program
   .version('0.1.0');
 
 program
+  .command('log')
+  .description('快速记录一条记忆')
+  .argument('<content>', '记忆内容')
+  .option('-t, --type <type>', '类型 (W/B/O/S)', 'B')
+  .option('-e, --entities <entities>', '实体，逗号分隔', '')
+  .option('-c, --confidence <number>', '置信度 (0-1)', '1.0')
+  .option('-d, --date <date>', '日期 (YYYY-MM-DD)', new Date().toISOString().split('T')[0])
+  .option('-w, --workspace <path>', '工作区路径', join(homedir(), '.openclaw', 'workspace'))
+  .action(async (content, options) => {
+    try {
+      const { LogWriter } = await import('../src/logwriter.js');
+      
+      const writer = new LogWriter(options.workspace);
+      
+      const entry = {
+        type: options.type.toUpperCase() as 'W' | 'B' | 'O' | 'S',
+        entities: options.entities ? options.entities.split(',').map((e: string) => e.trim()) : [],
+        content,
+        confidence: parseFloat(options.confidence)
+      };
+
+      const logPath = await writer.log(entry, options.date);
+      console.log(chalk.green('✅ 记忆已记录'));
+      console.log(chalk.gray(`文件: ${logPath}`));
+      
+      // 自动索引
+      const memory = new OpenClawMemory({
+        workspacePath: options.workspace,
+        enableReflection: false,
+        reflectionInterval: 7
+      });
+      await memory.init();
+      const count = await memory.indexDailyLog(options.date);
+      if (count > 0) {
+        console.log(chalk.gray(`已索引 ${count} 条记忆到数据库`));
+      }
+      await memory.close();
+      
+    } catch (error: any) {
+      console.error(chalk.red('❌ 记录失败:'), error.message);
+      process.exit(1);
+    }
+  });
+
+program
   .command('init')
   .description('初始化工作区记忆系统')
   .option('-w, --workspace <path>', '工作区路径', join(homedir(), '.openclaw', 'workspace'))
